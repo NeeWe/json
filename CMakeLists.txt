@@ -6,6 +6,16 @@ cmake_minimum_required(VERSION 3.5...4.0)
 ##
 project(nlohmann_json VERSION 3.12.0 LANGUAGES CXX)
 
+# Workaround for Apple CLT 26+ where c++/v1 headers may be only in the SDK
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+    include(CheckIncludeFileCXX)
+    check_include_file_cxx(ctime JSON_CXX_HEADERS_ACCESSIBLE)
+    if(NOT JSON_CXX_HEADERS_ACCESSIBLE AND CMAKE_OSX_SYSROOT)
+        message(STATUS "C++ headers not found via default path. Using SDK: ${CMAKE_OSX_SYSROOT}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdinc++ -cxx-isystem ${CMAKE_OSX_SYSROOT}/usr/include/c++/v1")
+    endif()
+endif()
+
 ##
 ## MAIN_PROJECT CHECK
 ## determine if nlohmann_json is built as a subproject (using add_subdirectory) or if it is the main project
@@ -60,6 +70,11 @@ option(JSON_LegacyDiscardedValueComparison "Enable legacy discarded value compar
 option(JSON_Install                        "Install CMake targets during install step." ${MAIN_PROJECT})
 option(JSON_MultipleHeaders                "Use non-amalgamated version of the library." ON)
 option(JSON_SystemInclude                  "Include as system headers (skip for clang-tidy)." OFF)
+option(JSON_ExportCompileCommands          "Generate compile_commands.json for code navigation (e.g., clangd)." ${MAIN_PROJECT})
+
+if (JSON_ExportCompileCommands)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 if (JSON_CI)
     include(ci)
